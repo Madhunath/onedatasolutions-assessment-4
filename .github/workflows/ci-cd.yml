@@ -31,9 +31,9 @@ jobs:
         run: |
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/assessment-4:latest
 
-      # Optional: Setup kubeconfig only if stored as a secret
+      # Optional: Setup kubeconfig only if provided as a secret
       - name: Setup Kubeconfig
-        if: secrets.KUBECONFIG != ''
+        if: ${{ secrets.KUBECONFIG != '' }}
         shell: bash
         run: |
           mkdir -p $HOME/.kube
