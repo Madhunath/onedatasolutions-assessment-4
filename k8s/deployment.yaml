@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: assessment-4
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: assessment-4
+  template:
+    metadata:
+      labels:
+        app: assessment-4
+    spec:
+      containers:
+        - name: assessment-4
+          image: madhunath/onedatasolutions:latest # Change to your Docker Hub username
+          ports:
+            - containerPort: 3000
+
