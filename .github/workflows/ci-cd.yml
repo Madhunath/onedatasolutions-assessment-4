@@ -6,34 +6,34 @@ on:
 
 jobs:
   build-test-deploy:
-    runs-on: self-hosted   # Windows runner
+    runs-on: self-hosted   # your Windows runner
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Verify Docker is running
-        shell: pwsh
+        shell: powershell
         run: docker info
 
       - name: Login to Docker Hub
-        shell: pwsh
+        shell: powershell
         run: |
-          $env:DOCKERHUB_TOKEN = "${{ secrets.DOCKERHUB_TOKEN }}"
-          echo $env:DOCKERHUB_TOKEN | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+          $token = "${{ secrets.DOCKERHUB_TOKEN }}"
+          echo $token | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
       - name: Build Docker image
-        shell: pwsh
+        shell: powershell
         run: |
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/assessment-4:latest .
 
       - name: Push Docker image
-        shell: pwsh
+        shell: powershell
         run: |
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/assessment-4:latest
 
       - name: Setup Kubeconfig (Optional)
-        shell: pwsh
+        shell: powershell
         run: |
           if ("${{ secrets.KUBECONFIG }}" -ne "") {
             New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.kube" | Out-Null
@@ -43,11 +43,11 @@ jobs:
           }
 
       - name: Verify cluster access
-        shell: pwsh
+        shell: powershell
         run: kubectl get nodes
 
       - name: Deploy to Minikube
-        shell: pwsh
+        shell: powershell
         run: |
           kubectl apply -f k8s/deployment.yaml
           kubectl apply -f k8s/service.yaml
