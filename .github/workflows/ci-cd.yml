@@ -31,13 +31,16 @@ jobs:
         run: |
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/assessment-4:latest
 
-      # Optional: Setup kubeconfig only if provided as a secret
+      # Optional Kubeconfig setup - only if you stored it as a secret
       - name: Setup Kubeconfig
-        if: ${{ secrets.KUBECONFIG != '' }}
         shell: bash
         run: |
-          mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
+          if [ -n "${{ secrets.KUBECONFIG }}" ]; then
+            mkdir -p $HOME/.kube
+            echo "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
+          else
+            echo "KUBECONFIG secret not set. Using existing kubeconfig."
+          fi
 
       - name: Verify cluster access
         shell: bash
