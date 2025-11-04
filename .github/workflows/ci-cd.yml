@@ -6,32 +6,32 @@ on:
 
 jobs:
   build-test-deploy:
-    runs-on: self-hosted   # since you are using your local runner
+    runs-on: self-hosted   # your local runner
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Docker
-        run: |
-          docker version
-
-      - name: Build Docker image
-        run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/assessment-4:latest .
+      - name: Verify Docker is running
+        run: docker info
 
       - name: Login to Docker Hub
-        run: |
-          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Build Docker image
+        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/assessment-4:latest .
 
       - name: Push Docker image
-        run: |
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/assessment-4:latest
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/assessment-4:latest
 
+      # Kubeconfig setup - only needed if you stored it as a GitHub secret
       - name: Setup Kubeconfig
         run: |
-          echo "${{ secrets.KUBECONFIG }}" > kubeconfig.yaml
-          export KUBECONFIG=kubeconfig.yaml
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
+
+      - name: Verify cluster access
+        run: kubectl get nodes
 
       - name: Deploy to Minikube
         run: |
