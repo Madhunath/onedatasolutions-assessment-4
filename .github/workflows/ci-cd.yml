@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-test-deploy:
-    runs-on: self-hosted   # your Windows runner
+    runs-on: self-hosted  # Your self-hosted Windows runner
 
     steps:
       - name: Checkout repository
@@ -19,35 +19,34 @@ jobs:
       - name: Login to Docker Hub
         shell: powershell
         run: |
+          $username = "${{ secrets.DOCKERHUB_USERNAME }}"
           $token = "${{ secrets.DOCKERHUB_TOKEN }}"
-          echo $token | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+          if ([string]::IsNullOrEmpty($username) -or [string]::IsNullOrEmpty($token)) {
+            Write-Error "DOCKERHUB_USERNAME or DOCKERHUB_TOKEN is missing in secrets!"
+            exit 1
+          }
+          echo $token | docker login -u $username --password-stdin
 
       - name: Build Docker image
         shell: powershell
         run: |
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/assessment-4:latest .
 
-      - name: Push Docker image
+      - name: Push Docker image to Docker Hub
         shell: powershell
         run: |
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/assessment-4:latest
 
-      - name: Setup Kubeconfig (Optional)
+      - name: Verify Minikube cluster access
         shell: powershell
-        run: |
-          if ("${{ secrets.KUBECONFIG }}" -ne "") {
-            New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.kube" | Out-Null
-            "${{ secrets.KUBECONFIG }}" | Out-File -FilePath "$env:USERPROFILE\.kube\config" -Encoding utf8
-          } else {
-            Write-Host "KUBECONFIG not provided, using existing configuration."
-          }
-
-      - name: Verify cluster access
-        shell: powershell
-        run: kubectl get nodes
+        run: kubectl cluster-info
 
       - name: Deploy to Minikube
         shell: powershell
         run: |
           kubectl apply -f k8s/deployment.yaml
           kubectl apply -f k8s/service.yaml
+
+      - name: Verify deployment status
+        shell: powershell
+        run: kubectl get pods -o wide
