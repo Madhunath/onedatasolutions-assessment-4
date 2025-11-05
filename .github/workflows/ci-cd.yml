@@ -1,11 +1,56 @@
-- name: 🔍 Debug Secret Length
-  shell: powershell
-  run: |
-    $u = "${{ secrets.DOCKERHUB_USERNAME }}"
-    $t = "${{ secrets.DOCKERHUB_TOKEN }}"
-    Write-Host "Username length: $($u.Length)"
-    Write-Host "Token length: $($t.Length)"
-    
-    # Expected:
-    # Username: "madhunath" → length = 9
-    # Token: "dckr_pat_xxx" → should be exactly 36 characters
+name: CI/CD to Minikube
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-test-deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔍 Debug Secret Length
+        shell: powershell
+        run: |
+          $u = "${{ secrets.DOCKERHUB_USERNAME }}"
+          $t = "${{ secrets.DOCKERHUB_TOKEN }}"
+          Write-Host "Username length: $($u.Length)"
+          Write-Host "Token length: $($t.Length)"
+
+      - name: Verify Docker is running
+        shell: powershell
+        run: docker info
+
+      - name: Login to Docker Hub
+        shell: cmd
+        run: echo %DOCKERHUB_TOKEN% | docker login -u %DOCKERHUB_USERNAME% --password-stdin
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build Docker image
+        shell: powershell
+        run: |
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/assessment-4:latest .
+
+      - name: Push Docker image
+        shell: powershell
+        run: |
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/assessment-4:latest
+
+      - name: Verify Minikube access
+        shell: powershell
+        run: kubectl cluster-info
+
+      - name: Deploy to Minikube
+        shell: powershell
+        run: |
+          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/service.yaml
+
+      - name: Check deployed pods
+        shell: powershell
+        run: kubectl get pods -o wide
