@@ -12,13 +12,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🔍 Debug Secret Length
+      - name: Set unique image tag
+        id: vars
         shell: powershell
         run: |
-          $u = "${{ secrets.DOCKERHUB_USERNAME }}"
-          $t = "${{ secrets.DOCKERHUB_TOKEN }}"
-          Write-Host "Username length: $($u.Length)"
-          Write-Host "Token length: $($t.Length)"
+          # Use short Git SHA (7 chars) as tag
+          $sha = git rev-parse --short HEAD
+          echo "IMAGE_TAG=$sha" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Verify Docker is running
         shell: powershell
@@ -34,23 +34,24 @@ jobs:
       - name: Build Docker image
         shell: powershell
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/assessment-4:latest .
+          $image = "${{ secrets.DOCKERHUB_USERNAME }}/assessment-4:${{ env.IMAGE_TAG }}"
+          docker build -t $image .
 
       - name: Push Docker image
         shell: powershell
         run: |
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/assessment-4:latest
+          $image = "${{ secrets.DOCKERHUB_USERNAME }}/assessment-4:${{ env.IMAGE_TAG }}"
+          docker push $image
 
-      - name: Verify Minikube access
-        shell: powershell
-        run: kubectl cluster-info
-
-      - name: Deploy to Minikube
+      - name: Deploy to Minikube with new image
         shell: powershell
         run: |
-          kubectl apply -f k8s/deployment.yaml
-          kubectl apply -f k8s/service.yaml
+          $image = "${{ secrets.DOCKERHUB_USERNAME }}/assessment-4:${{ env.IMAGE_TAG }}"
+          # Update the deployment to use the new image
+          kubectl set image deployment/assessment-4-deployment *= $image --record
 
-      - name: Check deployed pods
+      - name: Verify deployment
         shell: powershell
-        run: kubectl get pods -o wide
+        run: |
+          kubectl get pods
+          kubectl rollout status deployment/assessment-4-deployment --timeout=60s

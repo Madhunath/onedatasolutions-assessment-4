@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: assessment-4
+  name: assessment-4          # ← Keep this name
 spec:
   replicas: 1
   selector:
@@ -14,7 +14,6 @@ spec:
     spec:
       containers:
         - name: assessment-4
-          image: madhunath/onedatasolutions:latest # Change to your Docker Hub username
+          image: madhunath/assessment-4:latest  # ← Will be overridden by CI
           ports:
             - containerPort: 3000
-
