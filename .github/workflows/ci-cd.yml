@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-test-deploy:
-    runs-on: self-hosted  # Your self-hosted Windows runner
+    runs-on: self-hosted  # Your Windows self-hosted runner
 
     steps:
       - name: Checkout repository
@@ -17,27 +17,21 @@ jobs:
         run: docker info
 
       - name: Login to Docker Hub
-        shell: powershell
+        shell: bash  # ✅ Critical fix: avoids PowerShell newline issues
         run: |
-          $username = "${{ secrets.DOCKERHUB_USERNAME }}"
-          $token = "${{ secrets.DOCKERHUB_TOKEN }}"
-          if ([string]::IsNullOrEmpty($username) -or [string]::IsNullOrEmpty($token)) {
-            Write-Error "DOCKERHUB_USERNAME or DOCKERHUB_TOKEN is missing in secrets!"
-            exit 1
-          }
-          echo $token | docker login -u $username --password-stdin
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
       - name: Build Docker image
         shell: powershell
         run: |
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/assessment-4:latest .
 
-      - name: Push Docker image to Docker Hub
+      - name: Push Docker image
         shell: powershell
         run: |
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/assessment-4:latest
 
-      - name: Verify Minikube cluster access
+      - name: Verify Minikube access
         shell: powershell
         run: kubectl cluster-info
 
@@ -47,6 +41,6 @@ jobs:
           kubectl apply -f k8s/deployment.yaml
           kubectl apply -f k8s/service.yaml
 
-      - name: Verify deployment status
+      - name: Check deployed pods
         shell: powershell
         run: kubectl get pods -o wide
