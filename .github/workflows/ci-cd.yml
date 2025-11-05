@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-test-deploy:
-    runs-on: self-hosted  # Your Windows self-hosted runner
+    runs-on: self-hosted
 
     steps:
       - name: Checkout repository
@@ -17,9 +17,40 @@ jobs:
         run: docker info
 
       - name: Login to Docker Hub
-        shell: bash  # ✅ Critical fix: avoids PowerShell newline issues
+        shell: powershell
         run: |
-          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+          $username = "${{ secrets.DOCKERHUB_USERNAME }}"
+          $token = "${{ secrets.DOCKERHUB_TOKEN }}"
+          
+          # Validate secrets
+          if ([string]::IsNullOrWhiteSpace($username) -or [string]::IsNullOrWhiteSpace($token)) {
+            Write-Error "DOCKERHUB_USERNAME or DOCKERHUB_TOKEN is empty!"
+            exit 1
+          }
+
+          # Write token to stdin WITHOUT trailing newline
+          $bytes = [System.Text.Encoding]::UTF8.GetBytes($token)
+          $stdout = [System.Console]::OpenStandardOutput()
+          $stdout.Write($bytes, 0, $bytes.Length)
+          $stdout.Flush()
+
+          # Perform login
+          $psi = New-Object System.Diagnostics.ProcessStartInfo
+          $psi.FileName = "docker"
+          $psi.Arguments = "login -u `"$username`" --password-stdin"
+          $psi.UseShellExecute = $false
+          $psi.RedirectStandardInput = $true
+          $psi.CreateNoWindow = $true
+
+          $proc = [System.Diagnostics.Process]::Start($psi)
+          $proc.StandardInput.Write($token)
+          $proc.StandardInput.Close()
+          $proc.WaitForExit()
+
+          if ($proc.ExitCode -ne 0) {
+            Write-Error "Docker login failed!"
+            exit $proc.ExitCode
+          }
 
       - name: Build Docker image
         shell: powershell
