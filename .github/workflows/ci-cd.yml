@@ -48,10 +48,10 @@ jobs:
         run: |
           $image = "${{ secrets.DOCKERHUB_USERNAME }}/assessment-4:${{ env.IMAGE_TAG }}"
           # Update the deployment to use the new image
-          kubectl set image deployment/assessment-4= $image --record
+          kubectl set image deployment/assessment-4=$image --record
 
       - name: Verify deployment
         shell: powershell
         run: |
           kubectl get pods
-          kubectl rollout status deployment/assessment-4-deployment --timeout=60s
+          kubectl rollout status deployment/assessment-4 --timeout=60s
