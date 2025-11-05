@@ -13,10 +13,8 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set unique image tag
-        id: vars
         shell: powershell
         run: |
-          # Use short Git SHA (7 chars) as tag
           $sha = git rev-parse --short HEAD
           echo "IMAGE_TAG=$sha" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
@@ -47,10 +45,9 @@ jobs:
         shell: powershell
         run: |
           $image = "${{ secrets.DOCKERHUB_USERNAME }}/assessment-4:${{ env.IMAGE_TAG }}"
-          # Update the deployment to use the new image
-          kubectl set image deployment/assessment-4=$image --record
+          kubectl set image deployment/assessment-4 assessment-4=$image
 
-      - name: Verify deployment
+      - name: Verify deployment rollout
         shell: powershell
         run: |
           kubectl get pods
