@@ -1,77 +1,11 @@
-name: CI/CD to Minikube
-
-on:
-  push:
-    branches: [ main ]
-
-jobs:
-  build-test-deploy:
-    runs-on: self-hosted
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Verify Docker is running
-        shell: powershell
-        run: docker info
-
-      - name: Login to Docker Hub
-        shell: powershell
-        run: |
-          $username = "${{ secrets.DOCKERHUB_USERNAME }}"
-          $token = "${{ secrets.DOCKERHUB_TOKEN }}"
-          
-          # Validate secrets
-          if ([string]::IsNullOrWhiteSpace($username) -or [string]::IsNullOrWhiteSpace($token)) {
-            Write-Error "DOCKERHUB_USERNAME or DOCKERHUB_TOKEN is empty!"
-            exit 1
-          }
-
-          # Write token to stdin WITHOUT trailing newline
-          $bytes = [System.Text.Encoding]::UTF8.GetBytes($token)
-          $stdout = [System.Console]::OpenStandardOutput()
-          $stdout.Write($bytes, 0, $bytes.Length)
-          $stdout.Flush()
-
-          # Perform login
-          $psi = New-Object System.Diagnostics.ProcessStartInfo
-          $psi.FileName = "docker"
-          $psi.Arguments = "login -u `"$username`" --password-stdin"
-          $psi.UseShellExecute = $false
-          $psi.RedirectStandardInput = $true
-          $psi.CreateNoWindow = $true
-
-          $proc = [System.Diagnostics.Process]::Start($psi)
-          $proc.StandardInput.Write($token)
-          $proc.StandardInput.Close()
-          $proc.WaitForExit()
-
-          if ($proc.ExitCode -ne 0) {
-            Write-Error "Docker login failed!"
-            exit $proc.ExitCode
-          }
-
-      - name: Build Docker image
-        shell: powershell
-        run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/assessment-4:latest .
-
-      - name: Push Docker image
-        shell: powershell
-        run: |
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/assessment-4:latest
-
-      - name: Verify Minikube access
-        shell: powershell
-        run: kubectl cluster-info
-
-      - name: Deploy to Minikube
-        shell: powershell
-        run: |
-          kubectl apply -f k8s/deployment.yaml
-          kubectl apply -f k8s/service.yaml
-
-      - name: Check deployed pods
-        shell: powershell
-        run: kubectl get pods -o wide
+- name: 🔍 Debug Secret Length
+  shell: powershell
+  run: |
+    $u = "${{ secrets.DOCKERHUB_USERNAME }}"
+    $t = "${{ secrets.DOCKERHUB_TOKEN }}"
+    Write-Host "Username length: $($u.Length)"
+    Write-Host "Token length: $($t.Length)"
+    
+    # Expected:
+    # Username: "madhunath" → length = 9
+    # Token: "dckr_pat_xxx" → should be exactly 36 characters
